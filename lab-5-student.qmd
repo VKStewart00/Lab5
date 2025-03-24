@@ -1,3 +1,13 @@
+---
+title: 'Lab 4'
+author: 'Van K Stewart'
+ouput: html_document
+embed-resources: true
+code-tools: true
+echo: true
+---
+
+
 In this lab, we will be using the `dplyr` package to explore student evaluations
 of teaching data. 
 
