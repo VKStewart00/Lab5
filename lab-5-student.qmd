@@ -9,7 +9,8 @@ echo: true
 
 
 In this lab, we will be using the `dplyr` package to explore student evaluations
-of teaching data. 
+of teaching data.
+
 
 **You are expected to use functions from `dplyr` to do your data manipulation!**
 
@@ -150,6 +151,8 @@ included in the `teacher_evals_codebook.pdf`.
 #| label: setup
 # code chunk for loading packages
 
+library(tidyverse)
+
 ```
 
 **2. Load in the `teacher_evals` data.** 
@@ -158,6 +161,8 @@ included in the `teacher_evals_codebook.pdf`.
 #| label: load-data
 # code chunk for importing the data
 
+teacherE <- read_csv("teacher_evals.csv")
+
 ```
 
 ### Data Inspection + Summary
@@ -165,18 +170,21 @@ included in the `teacher_evals_codebook.pdf`.
 **3. Provide a brief overview (~4 sentences) of the dataset.**
 
 ```{r}
-#| label: explore-data
-# you may want to use code to answer this question
+#|label: explore-data
+
+## view(teacherE) 
+
+glimpse(teacherE)
+
+summary(teacherE)
 
 ```
+
+>> Data consist of teacher ID, number of questions, number of participants, teachers score, and various information on students' academics.  
 
 **4. What is the unit of observation (i.e. a single row in the dataset) identified by?**
 
-```{r}
-#| label: row-identification
-# you may want to use code to answer this question
-
-```
+>> There is a teacher ID number, along with a course ID number.  
 
 **5. Use _one_ `dplyr` pipeline to clean the data by:**
 
@@ -191,6 +199,29 @@ included in the `teacher_evals_codebook.pdf`.
 #| label: data-cleaning
 # code chunk for Q4
 
+
+## load the data
+teacher_evals_clean <- teacherE|> 
+  
+  ## Rename the 'sex' column to gender
+  rename( sex = gender )|>
+  
+  ## Removes courses with fewer then 10 ppl
+  filter(no_participants >= 10)|>
+  
+  ## Sets teacher id to numeric
+  mutate(teacher_id = as.numeric(teacher_id))|>
+  
+  ## Selects for the columns we want
+  select(course_id, teacher_id, question_no, no_participants, resp_share, 
+         SET_score_avg, percent_failed_cur, academic_degree, seniority, sex)|>
+  
+  ## Saves the csv
+  write_csv("TeacherEC.csv")
+  
+## Checking my work
+view(teacher_evals_clean)
+
 ```
 
 **6. How many unique instructors and unique courses are present in the cleaned dataset?**
@@ -199,7 +230,15 @@ included in the `teacher_evals_codebook.pdf`.
 #| label: unique-courses
 # code chunk for Q5
 
+teacher_evals_clean|>
+distinct( course_id )
+
+teacher_evals_clean|>
+distinct( teacher_id )
+
 ```
+
+>> There is 939 unique course IDs, and 297 teacher IDs.  
 
 **7. One teacher-course combination has some missing values, coded as `NA`. Which instructor has these missing values? Which course? What variable are the missing values in?**
 
@@ -207,7 +246,16 @@ included in the `teacher_evals_codebook.pdf`.
 #| label: uncovering-missing-values
 # code chunk for Q6
 
+
+print(teacher_evals_clean|>
+        
+  ## checks across all columns for NA values.  
+    ## got the idea for this from here: https://stackoverflow.com/questions/66572756/checking-all-columns-in-data-frame-for-missing-values-in-r
+  filter(if_any(everything(), is.na))) 
+
 ```
+>> teacher number 56347, they are missing `percent_failed_cur` column.  
+
 
 **8. What are the demographics of the instructors in this study? Investigate the variables `academic_degree`, `seniority`, and `sex` and summarize your findings in ~3 complete sentences.**
 
@@ -215,7 +263,24 @@ included in the `teacher_evals_codebook.pdf`.
 #| label: exploring-demographics-of-instructors
 # code chunk for Q7
 
+## Determine distribution of academic_degree
+ggplot(teacher_evals_clean, aes(x = academic_degree)) +
+  geom_bar() +
+  labs(title = "Distribution of Academic Degrees")
+
+## Determine distribution of seniority
+ggplot(teacher_evals_clean, aes(x = seniority)) +
+  geom_boxplot() +
+  labs(title = "Distribution of Seniority")
+
+## Determine distribution of sex
+ggplot(teacher_evals_clean, aes(x = sex)) +
+  geom_bar() +
+  labs(title = "Gender Distribution of Instructors")
+
 ```
+
+>> There are more male than female teachers in this study.  The majority of these teachers have a doctorate.  And 75% of them have been teaching for less than six years.  
 
 **9. Each course seems to have used a different subset of the nine evaluation questions. How many teacher-course combinations asked all nine questions?**
 
@@ -223,7 +288,17 @@ included in the `teacher_evals_codebook.pdf`.
 #| label: teacher-course-asked-every-question
 # code chunk for Q8
 
+teacher_evals_clean |> 
+  
+  ## counts how many times each teacher and course ID exist in the dataset
+  count(teacher_id, course_id)|>
+  
+  ## filters out how many have more than nine responses
+  filter(n == 9 )
+
 ```
+>> 49 combinations asked all nine questions.  
+
 
 ## Rate my Professor
 
@@ -232,8 +307,14 @@ included in the `teacher_evals_codebook.pdf`.
 ```{r}
 #| label: question-1-high-low
 # code chunk for Q9
+ teacher_evals_clean|>
+  group_by(teacher_id)|>
+  arrange(SET_score_avg)
+
 
 ```
+
+>> Teacher 3477 has the lowest score, while teacher 66074 has the higest score.  
 
 **11. Which instructors with one year of experience had the highest and lowest average percentage of students failing in the current semester across all their courses?**
 
@@ -241,7 +322,22 @@ included in the `teacher_evals_codebook.pdf`.
 #| label: one-year-experience-failing-students
 # code chunk for Q10
 
+
+## 
+teacher_evals_clean|>
+  
+  ## Selects for teachers with one year experience
+  filter( seniority == 1)|>
+  
+  ## Groups by teacher ID
+  group_by( teacher_id )|>
+  
+  ## Sorts percent failed
+  arrange(percent_failed_cur)
+
 ```
+
+>> Teacher 98650 has the lowest fail rate, while teacher 104362 has the highest.
 
 **12. Which female instructors with either a doctorate or professional degree had the highest and lowest average percent of students responding to the evaluation across all their courses?**
 
@@ -249,4 +345,17 @@ included in the `teacher_evals_codebook.pdf`.
 #| label: female-instructor-student-response
 # code chunk for Q11
 
-```
+teacher_evals_clean|>
+  
+  filter( sex == "female" , academic_degree == c("dr", "prof"))|>
+  
+    ## Groups by teacher ID
+  group_by( teacher_id )|>
+  
+  ## Sorts percent failed
+  arrange(percent_failed_cur)
+
+``` 
+ 
+ >> Teacher 3485 has the lowest fail rate, while teacher 43811 has the higest failure rate.   
+
